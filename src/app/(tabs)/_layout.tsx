@@ -9,7 +9,7 @@ function tabColor(color: unknown): string {
 }
 
 export default function TabLayout() {
-  const { wrongCount } = useProgress();
+  const { wrongCount, dueCount } = useProgress();
   return (
     <Tabs
       screenOptions={{
@@ -29,55 +29,48 @@ export default function TabLayout() {
         },
       }}
     >
+      <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen
-        name="index"
+        name="search"
         options={{
-          title: '首页',
-          tabBarButtonTestID: 'tab-home',
+          title: '查词',
+          tabBarButtonTestID: 'tab-search',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} color={tabColor(color)} size={22} />
+            <Ionicons name={focused ? 'search' : 'search-outline'} color={tabColor(color)} size={22} />
           ),
         }}
       />
       <Tabs.Screen
-        name="dictionary"
+        name="quiz"
         options={{
-          title: '词典',
-          tabBarButtonTestID: 'tab-dictionary',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'book' : 'book-outline'} color={tabColor(color)} size={22} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="practice"
-        options={{
-          title: '练习',
-          tabBarButtonTestID: 'tab-practice',
+          title: '刷题',
+          tabBarButtonTestID: 'tab-quiz',
+          tabBarBadge: wrongCount > 0 ? wrongCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: theme.wrong, fontSize: 11 },
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'checkbox' : 'checkbox-outline'} color={tabColor(color)} size={22} />
           ),
         }}
       />
       <Tabs.Screen
-        name="wrongs"
+        name="review"
         options={{
-          title: '错题',
-          tabBarButtonTestID: 'tab-wrongs',
-          tabBarBadge: wrongCount > 0 ? wrongCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: theme.wrong, fontSize: 11 },
+          title: '复习',
+          tabBarButtonTestID: 'tab-review',
+          tabBarBadge: dueCount > 0 ? dueCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: theme.accent, fontSize: 11 },
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'refresh-circle' : 'refresh-circle-outline'} color={tabColor(color)} size={22} />
+            <Ionicons name={focused ? 'albums' : 'albums-outline'} color={tabColor(color)} size={22} />
           ),
         }}
       />
       <Tabs.Screen
-        name="favorites"
+        name="me"
         options={{
-          title: '收藏',
-          tabBarButtonTestID: 'tab-favorites',
+          title: '我的',
+          tabBarButtonTestID: 'tab-me',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'star' : 'star-outline'} color={tabColor(color)} size={22} />
+            <Ionicons name={focused ? 'person' : 'person-outline'} color={tabColor(color)} size={22} />
           ),
         }}
       />

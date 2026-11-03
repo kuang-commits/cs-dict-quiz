@@ -1,7 +1,8 @@
+import { enrichment } from '@/data/enrichment';
 import type { Term } from '@/types';
 
 /** Illustrative seed dictionary for beginners. Original explanatory copy. */
-export const terms: Term[] = [
+const seed: Array<Omit<Term, 'partOfSpeech' | 'examples' | 'related'>> = [
   {
     id: 'http',
     category: 'network',
@@ -723,3 +724,14 @@ export const terms: Term[] = [
     example: '服务器找到页面后，会用 Response 把内容送回浏览器。',
   },
 ];
+
+export const terms: Term[] = seed.map((term) => {
+  const extra = enrichment[term.id];
+  if (!extra) throw new Error(`缺少词卡资料：${term.id}`);
+  return {
+    ...term,
+    partOfSpeech: extra.pos,
+    examples: extra.lines.map(([english, chinese]) => ({ english, chinese })),
+    related: extra.related,
+  };
+});

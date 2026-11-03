@@ -35,7 +35,7 @@ export default function WrongBookScreen() {
           <T color={theme.muted} style={styles.emptyBody}>
             去章节练习做几题，错过的会自动出现在这里。
           </T>
-          <Pressable onPress={() => router.navigate('/practice')} style={styles.primary} accessibilityRole="button">
+          <Pressable onPress={() => router.navigate('/quiz/practice')} style={styles.primary} accessibilityRole="button">
             <T bold color={theme.white}>
               去章节练习
             </T>
@@ -67,7 +67,7 @@ export default function WrongBookScreen() {
           </ScrollView>
           <View style={styles.footer}>
             <Pressable
-              onPress={() => router.push('/wrongs/quiz')}
+              onPress={() => router.push('/quiz/wrongs/quiz')}
               style={styles.primary}
               testID="retry-wrongs"
               accessibilityRole="button"

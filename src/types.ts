@@ -1,13 +1,22 @@
 export type CategoryId = 'network' | 'programming' | 'database' | 'os' | 'security' | 'web';
 
+export type ExampleSentence = {
+  english: string;
+  chinese: string;
+};
+
 export type Term = {
   id: string;
   category: CategoryId;
   english: string;
   pronunciation: string;
+  partOfSpeech: string;
   chinese: string;
   explanation: string;
+  /** Sentence used by fill-in questions. It contains the English headword once. */
   example: string;
+  examples: ExampleSentence[];
+  related: string[];
 };
 
 export type QuestionType = 'en-to-zh' | 'zh-to-en' | 'fill-in';
@@ -49,9 +58,18 @@ export type ExamResult = {
   items: ExamItem[];
 };
 
+export type VocabCard = {
+  addedAt: number;
+  stage: number;
+  due: string;
+};
+
+export type ReviewRating = 'know' | 'fuzzy' | 'forget';
+
 export type Persisted = {
-  version: 1;
-  favorites: string[];
+  version: 2;
+  vocab: Record<string, VocabCard>;
+  searchHistory: string[];
   learnedTermIds: string[];
   seenQuestionIds: string[];
   answered: number;

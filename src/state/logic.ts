@@ -1,11 +1,14 @@
-import type { AnswerMode, AnswerResult, ExamResult, Persisted, Question } from '@/types';
+import type { AnswerMode, AnswerResult, ExamResult, Persisted, Question, ReviewRating, VocabCard } from '@/types';
 
 export const WRONG_RETRIES_TO_CLEAR = 2;
+export const REVIEW_INTERVALS = [1, 2, 4, 7, 15] as const;
+const HISTORY_LIMIT = 12;
 
 export function emptyProgress(): Persisted {
   return {
-    version: 1,
-    favorites: [],
+    version: 2,
+    vocab: {},
+    searchHistory: [],
     learnedTermIds: [],
     seenQuestionIds: [],
     answered: 0,
@@ -23,7 +26,7 @@ export function dateKey(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-function shiftDays(date: Date, days: number): Date {
+export function shiftDays(date: Date, days: number): Date {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
@@ -32,11 +35,30 @@ function shiftDays(date: Date, days: number): Date {
 export function normalizeProgress(raw: unknown): Persisted {
   const base = emptyProgress();
   if (!raw || typeof raw !== 'object') return base;
-  const value = raw as Partial<Persisted>;
-  if (value.version !== 1) return base;
+  const value = raw as {
+    version?: number;
+    favorites?: unknown;
+    vocab?: Persisted['vocab'];
+    searchHistory?: unknown;
+    learnedTermIds?: unknown;
+    seenQuestionIds?: unknown;
+    answered?: unknown;
+    correct?: unknown;
+    streak?: unknown;
+    lastActiveDate?: unknown;
+    wrongs?: Persisted['wrongs'];
+    lastExam?: Persisted['lastExam'];
+  };
+  if (value.version !== 1 && value.version !== 2) return base;
+  const vocab = normalizeVocab(value.vocab);
+  const today = dateKey(new Date());
+  for (const id of stringList(value.favorites)) {
+    if (!vocab[id]) vocab[id] = { addedAt: 0, stage: 0, due: today };
+  }
   return {
     ...base,
-    favorites: stringList(value.favorites),
+    vocab,
+    searchHistory: stringList(value.searchHistory).slice(0, HISTORY_LIMIT),
     learnedTermIds: stringList(value.learnedTermIds),
     seenQuestionIds: stringList(value.seenQuestionIds),
     answered: numberOr(value.answered, 0),
@@ -46,6 +68,20 @@ export function normalizeProgress(raw: unknown): Persisted {
     wrongs: value.wrongs && typeof value.wrongs === 'object' ? value.wrongs : {},
     lastExam: value.lastExam ?? null,
   };
+}
+
+function normalizeVocab(value: unknown): Record<string, VocabCard> {
+  if (!value || typeof value !== 'object') return {};
+  const vocab: Record<string, VocabCard> = {};
+  for (const [id, card] of Object.entries(value as Record<string, Partial<VocabCard>>)) {
+    if (!card || typeof card !== 'object') continue;
+    vocab[id] = {
+      addedAt: numberOr(card.addedAt, 0),
+      stage: numberOr(card.stage, 0),
+      due: typeof card.due === 'string' ? card.due : dateKey(new Date()),
+    };
+  }
+  return vocab;
 }
 
 function stringList(value: unknown): string[] {
@@ -117,12 +153,67 @@ export function applyAnswer(
   };
 }
 
-export function toggleFavorite(prev: Persisted, termId: string): Persisted {
-  const exists = prev.favorites.includes(termId);
+export function toggleVocab(prev: Persisted, termId: string, now = new Date()): Persisted {
+  if (prev.vocab[termId]) {
+    const vocab = { ...prev.vocab };
+    delete vocab[termId];
+    return { ...prev, vocab };
+  }
   return {
     ...prev,
-    favorites: exists ? prev.favorites.filter((id) => id !== termId) : [...prev.favorites, termId],
+    vocab: {
+      ...prev.vocab,
+      [termId]: { addedAt: now.getTime(), stage: 0, due: dateKey(now) },
+    },
   };
+}
+
+export function rateVocab(prev: Persisted, termId: string, rating: ReviewRating, now = new Date()): Persisted {
+  const card = prev.vocab[termId];
+  if (!card) return prev;
+  if (rating === 'forget') {
+    return {
+      ...prev,
+      vocab: { ...prev.vocab, [termId]: { ...card, stage: 0, due: dateKey(now) } },
+    };
+  }
+  if (rating === 'fuzzy') {
+    return {
+      ...prev,
+      vocab: { ...prev.vocab, [termId]: { ...card, due: dateKey(shiftDays(now, 1)) } },
+    };
+  }
+  const days = REVIEW_INTERVALS[Math.min(card.stage, REVIEW_INTERVALS.length - 1)];
+  return {
+    ...prev,
+    vocab: {
+      ...prev.vocab,
+      [termId]: {
+        ...card,
+        stage: Math.min(card.stage + 1, REVIEW_INTERVALS.length),
+        due: dateKey(shiftDays(now, days)),
+      },
+    },
+  };
+}
+
+export function dueVocabIds(prev: Persisted, now = new Date()): string[] {
+  const today = dateKey(now);
+  return Object.entries(prev.vocab)
+    .filter(([, card]) => card.due <= today)
+    .sort((left, right) => left[1].due.localeCompare(right[1].due) || left[1].addedAt - right[1].addedAt)
+    .map(([id]) => id);
+}
+
+export function rememberSearch(prev: Persisted, query: string): Persisted {
+  const text = query.trim();
+  if (!text) return prev;
+  const searchHistory = [text, ...prev.searchHistory.filter((item) => item !== text)].slice(0, HISTORY_LIMIT);
+  return { ...prev, searchHistory };
+}
+
+export function clearSearchHistory(prev: Persisted): Persisted {
+  return { ...prev, searchHistory: [] };
 }
 
 export function examPoints(exam: Pick<ExamResult, 'correct' | 'total'>): number {

@@ -3,20 +3,34 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { T } from '@/components/Text';
 import { theme } from '@/theme';
-import type { AnswerMode, AnswerResult, ExamResult, Persisted, Question } from '@/types';
-import { applyAnswer, emptyProgress, normalizeProgress, toggleFavorite } from '@/state/logic';
+import type { AnswerMode, AnswerResult, ExamResult, Persisted, Question, ReviewRating } from '@/types';
+import {
+  applyAnswer,
+  clearSearchHistory,
+  dueVocabIds,
+  emptyProgress,
+  normalizeProgress,
+  rateVocab,
+  rememberSearch,
+  toggleVocab,
+} from '@/state/logic';
 import { View } from 'react-native';
 
-const STORAGE_KEY = 'cs-dict-quiz-v1';
+const STORAGE_KEY = 'cs-dict-quiz-v2';
+const LEGACY_KEY = 'cs-dict-quiz-v1';
 
 type ProgressValue = {
   ready: boolean;
   data: Persisted;
   wrongCount: number;
+  dueCount: number;
   accuracy: number | null;
   recordAnswer: (question: Question, chosen: number, mode: AnswerMode) => AnswerResult;
   saveExam: (exam: ExamResult) => void;
-  toggleFavorite: (termId: string) => void;
+  toggleVocab: (termId: string) => boolean;
+  rateReview: (termId: string, rating: ReviewRating) => void;
+  rememberSearch: (query: string) => void;
+  clearSearchHistory: () => void;
 };
 
 const ProgressContext = createContext<ProgressValue | null>(null);
@@ -30,11 +44,13 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
+      .then(async (raw) => {
         if (cancelled) return;
-        if (raw) {
+        const legacy = raw ? null : await AsyncStorage.getItem(LEGACY_KEY);
+        const source = raw ?? legacy;
+        if (source) {
           try {
-            setData(normalizeProgress(JSON.parse(raw)));
+            setData(normalizeProgress(JSON.parse(source)));
           } catch {
             setData(emptyProgress());
           }
@@ -68,7 +84,26 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggle = useCallback((termId: string) => {
-    const next = toggleFavorite(dataRef.current, termId);
+    const next = toggleVocab(dataRef.current, termId);
+    dataRef.current = next;
+    setData(next);
+    return Boolean(next.vocab[termId]);
+  }, []);
+
+  const rateReview = useCallback((termId: string, rating: ReviewRating) => {
+    const next = rateVocab(dataRef.current, termId, rating);
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
+  const remember = useCallback((query: string) => {
+    const next = rememberSearch(dataRef.current, query);
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    const next = clearSearchHistory(dataRef.current);
     dataRef.current = next;
     setData(next);
   }, []);
@@ -78,12 +113,16 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       ready,
       data,
       wrongCount: Object.keys(data.wrongs).length,
+      dueCount: dueVocabIds(data).length,
       accuracy: data.answered === 0 ? null : data.correct / data.answered,
       recordAnswer,
       saveExam,
-      toggleFavorite: toggle,
+      toggleVocab: toggle,
+      rateReview,
+      rememberSearch: remember,
+      clearSearchHistory: clearHistory,
     }),
-    [ready, data, recordAnswer, saveExam, toggle],
+    [ready, data, recordAnswer, saveExam, toggle, rateReview, remember, clearHistory],
   );
 
   if (!ready) {

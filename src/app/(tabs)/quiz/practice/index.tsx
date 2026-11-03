@@ -30,7 +30,7 @@ export default function PracticeHome() {
           return (
             <Pressable
               key={category.id}
-              onPress={() => router.push(`/practice/${category.id}`)}
+              onPress={() => router.push(`/quiz/practice/${category.id}`)}
               testID={`category-${category.id}`}
               accessibilityRole="button"
               style={({ pressed }) => [styles.card, { opacity: pressed ? 0.9 : 1 }]}

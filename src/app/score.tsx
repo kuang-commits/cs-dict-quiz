@@ -17,9 +17,9 @@ export default function ScoreScreen() {
     return (
       <View style={[styles.page, styles.center, { paddingTop: insets.top }]}>
         <T>还没有考试记录</T>
-        <Pressable onPress={() => router.replace('/')} style={styles.primary}>
+        <Pressable onPress={() => router.replace('/quiz')} style={styles.primary}>
           <T bold color={theme.white}>
-            返回首页
+            返回刷题
           </T>
         </Pressable>
       </View>
@@ -80,8 +80,8 @@ export default function ScoreScreen() {
         ) : null}
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Pressable onPress={() => router.dismissTo('/')} style={styles.ghost} testID="score-home" accessibilityRole="button">
-          <T bold>返回首页</T>
+        <Pressable onPress={() => router.dismissTo('/quiz')} style={styles.ghost} testID="score-home" accessibilityRole="button">
+          <T bold>返回刷题</T>
         </Pressable>
         <Pressable
           onPress={() => router.replace('/exam')}

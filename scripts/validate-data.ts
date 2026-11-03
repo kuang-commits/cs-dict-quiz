@@ -1,7 +1,7 @@
 import { CATEGORIES } from '../src/data/categories';
-import { questions, questionsForCategory } from '../src/data/questions';
+import { questions, questionsForCategory, suggestTerms } from '../src/data/questions';
 import { terms } from '../src/data/terms';
-import { applyAnswer, emptyProgress } from '../src/state/logic';
+import { applyAnswer, emptyProgress, rateVocab, toggleVocab } from '../src/state/logic';
 import type { CategoryId } from '../src/types';
 
 function check(condition: unknown, message: string): asserts condition {
@@ -23,6 +23,16 @@ for (const term of terms) {
   check(!chinese.has(term.chinese), `重复中文 ${term.chinese}`);
   chinese.add(term.chinese);
   check(term.example.includes(term.english), `${term.id} 的例句没有包含英文`);
+  check(term.partOfSpeech.length > 0, `${term.id} 缺少词性`);
+  check(term.examples.length >= 2, `${term.id} 例句少于 2 条`);
+  for (const sentence of term.examples) {
+    check(sentence.english.includes(term.english), `${term.id} 英文例句没有词头`);
+    check(sentence.chinese.length > 0, `${term.id} 例句缺少中文`);
+  }
+  check(term.related.length >= 2, `${term.id} 相关词太少`);
+  for (const relatedId of term.related) {
+    check(ids.has(relatedId) || terms.some((item) => item.id === relatedId), `${term.id} 的相关词不存在：${relatedId}`);
+  }
   check(term.pronunciation.length > 0 && term.explanation.length > 0, `${term.id} 内容不完整`);
   const occurrences = term.example.split(term.english).length - 1;
   check(occurrences === 1, `${term.id} 的例句应只出现一次英文，实际 ${occurrences}`);
@@ -72,6 +82,22 @@ state = applyAnswer(state, sample, sample.answerIndex, 'wrong').state;
 check(!state.wrongs[sample.id], '连续做对 2 次后应移出');
 check(state.learnedTermIds.includes(sample.termId), '答对后应记入已学');
 check(state.streak === 1, '当天首次作答应开始连续学习');
+
+check(suggestTerms('htp')[0]?.id === 'http', 'htp 应模糊匹配到 HTTP');
+check(suggestTerms('超文本')[0]?.id === 'http', '中文片段应匹配 HTTP');
+check(suggestTerms('routre')[0]?.id === 'router', '少一个字母应匹配 Router');
+
+const day = new Date(2026, 10, 3);
+let book = toggleVocab(emptyProgress(), 'http', day);
+check(book.vocab.http?.due === '2026-11-03', '新词今天就要复习');
+book = rateVocab(book, 'http', 'know', day);
+check(book.vocab.http?.due === '2026-11-04' && book.vocab.http.stage === 1, '认识后间隔 1 天');
+book = rateVocab(book, 'http', 'know', new Date(2026, 10, 4));
+check(book.vocab.http?.due === '2026-11-06' && book.vocab.http.stage === 2, '再次认识间隔 2 天');
+book = rateVocab(book, 'http', 'fuzzy', new Date(2026, 10, 6));
+check(book.vocab.http?.due === '2026-11-07' && book.vocab.http.stage === 2, '模糊只隔 1 天且不升级');
+book = rateVocab(book, 'http', 'forget', new Date(2026, 10, 7));
+check(book.vocab.http?.stage === 0 && book.vocab.http.due === '2026-11-07', '不认识回到今天');
 
 console.log(`术语 ${terms.length}，题目 ${questions.length}`);
 console.log('错题本规则校验通过');

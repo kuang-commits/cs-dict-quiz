@@ -155,29 +155,55 @@ export function gradeExam(items: ExamItem[], elapsedSec: number, timedOut: boole
   };
 }
 
-export function searchTerms(query: string, category: Term['category'] | 'all' = 'all'): Term[] {
-  const folded = query.trim().toLowerCase();
+export function suggestTerms(query: string, limit = 8): Term[] {
   const raw = query.trim();
+  if (!raw) return [];
   return terms
-    .filter((term) => (category === 'all' ? true : term.category === category))
-    .filter((term) => {
-      if (!folded) return true;
-      return (
-        term.english.toLowerCase().includes(folded) ||
-        term.chinese.includes(raw) ||
-        term.pronunciation.includes(raw) ||
-        term.explanation.includes(raw)
-      );
-    })
-    .sort((left, right) => rank(left, folded, raw) - rank(right, folded, raw));
+    .map((term) => ({ term, score: fuzzyScore(term, raw) }))
+    .filter((item) => item.score < 40)
+    .sort((left, right) => left.score - right.score || left.term.english.localeCompare(right.term.english))
+    .slice(0, limit)
+    .map((item) => item.term);
 }
 
-function rank(term: Term, folded: string, raw: string): number {
-  if (!folded) return 0;
+function fuzzyScore(term: Term, raw: string): number {
+  const folded = raw.toLowerCase();
   const english = term.english.toLowerCase();
-  if (english === folded) return 0;
-  if (english.startsWith(folded)) return 1;
-  if (term.chinese === raw) return 2;
-  if (term.chinese.includes(raw)) return 3;
-  return 4;
+  const compact = english.replace(/\s+/g, '');
+  const queryCompact = folded.replace(/\s+/g, '');
+  if (english === folded || term.chinese === raw) return 0;
+  if (english.startsWith(folded) || compact.startsWith(queryCompact)) return 1;
+  if (term.chinese.startsWith(raw)) return 2;
+  if (english.includes(folded) || compact.includes(queryCompact)) return 3;
+  if (term.chinese.includes(raw) || term.pronunciation.includes(raw)) return 4;
+  if (isSubsequence(queryCompact, compact)) return 5;
+  const distance = levenshtein(queryCompact, compact);
+  const allowance = queryCompact.length <= 4 ? 1 : 2;
+  if (queryCompact.length >= 2 && distance <= allowance) return 10 + distance;
+  return 40;
+}
+
+function isSubsequence(query: string, text: string): boolean {
+  if (query.length < 2 || query.length > text.length) return false;
+  let cursor = 0;
+  for (const char of text) {
+    if (char === query[cursor]) cursor += 1;
+    if (cursor === query.length) return true;
+  }
+  return false;
+}
+
+function levenshtein(left: string, right: string): number {
+  const rows = left.length + 1;
+  const cols = right.length + 1;
+  const table = Array.from({ length: rows }, () => Array<number>(cols).fill(0));
+  for (let row = 0; row < rows; row += 1) table[row][0] = row;
+  for (let col = 0; col < cols; col += 1) table[0][col] = col;
+  for (let row = 1; row < rows; row += 1) {
+    for (let col = 1; col < cols; col += 1) {
+      const cost = left[row - 1] === right[col - 1] ? 0 : 1;
+      table[row][col] = Math.min(table[row - 1][col] + 1, table[row][col - 1] + 1, table[row - 1][col - 1] + cost);
+    }
+  }
+  return table[left.length][right.length];
 }
