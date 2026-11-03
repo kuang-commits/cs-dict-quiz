@@ -6,8 +6,8 @@ import { useEffect } from 'react';
 import { Platform, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ProgressProvider } from '@/state/progress';
-import { theme } from '@/theme';
+import { ProgressProvider, useProgress } from '@/state/progress';
+import { darkTheme, lightTheme, ThemeContext, theme } from '@/theme';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -29,19 +29,33 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ProgressProvider>
-        <PhoneFrame>
-          <RouteStatus />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: theme.bg },
-              animation: 'slide_from_right',
-            }}
-          />
-        </PhoneFrame>
+        <ThemeBridge>
+          <PhoneFrame>
+            <RouteStatus />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: theme.bg },
+                animation: 'slide_from_right',
+              }}
+            />
+          </PhoneFrame>
+        </ThemeBridge>
       </ProgressProvider>
     </SafeAreaProvider>
   );
+}
+
+function ThemeBridge({ children }: { children: React.ReactNode }) {
+  const { data, setColorMode } = useProgress();
+  const palette = data.colorMode === 'light' ? lightTheme : darkTheme;
+  const value = {
+    palette,
+    mode: data.colorMode,
+    setMode: setColorMode,
+    toggle: () => setColorMode(data.colorMode === 'dark' ? 'light' : 'dark'),
+  };
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 function RouteStatus() {

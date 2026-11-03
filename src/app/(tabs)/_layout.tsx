@@ -2,14 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { useProgress } from '@/state/progress';
-import { theme } from '@/theme';
+import { useTheme } from '@/theme';
 
 function tabColor(color: unknown): string {
-  return typeof color === 'string' ? color : theme.faint;
+  return typeof color === 'string' ? color : '#7E8792';
 }
 
 export default function TabLayout() {
   const { wrongCount, dueCount } = useProgress();
+  const theme = useTheme();
   return (
     <Tabs
       screenOptions={{

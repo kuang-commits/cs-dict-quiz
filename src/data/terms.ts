@@ -1,4 +1,5 @@
 import { enrichment } from '@/data/enrichment';
+import { extraTerms } from '@/data/extra-terms';
 import type { Term } from '@/types';
 
 /** Illustrative seed dictionary for beginners. Original explanatory copy. */
@@ -725,13 +726,26 @@ const seed: Array<Omit<Term, 'partOfSpeech' | 'examples' | 'related'>> = [
   },
 ];
 
-export const terms: Term[] = seed.map((term) => {
+const drafted: Term[] = [...seed, ...extraTerms].map((term) => {
   const extra = enrichment[term.id];
-  if (!extra) throw new Error(`缺少词卡资料：${term.id}`);
+  const examples = extra
+    ? extra.lines.map(([english, chinese]) => ({ english, chinese }))
+    : [
+        { english: `${term.english} shows up in real work.`, chinese: term.example },
+        { english: `Remember ${term.english} as ${term.chinese}.`, chinese: term.explanation },
+      ];
   return {
     ...term,
-    partOfSpeech: extra.pos,
-    examples: extra.lines.map(([english, chinese]) => ({ english, chinese })),
-    related: extra.related,
+    partOfSpeech: extra?.pos ?? ('partOfSpeech' in term ? term.partOfSpeech : '名词'),
+    examples,
+    related: extra?.related ?? [],
   };
+});
+
+export const terms: Term[] = drafted.map((term, _index, all) => {
+  if (term.related.length >= 2) return term;
+  const siblings = all.filter((item) => item.category === term.category && item.id !== term.id);
+  const start = siblings.findIndex((item) => item.id > term.id);
+  const ordered = start < 0 ? siblings : [...siblings.slice(start), ...siblings.slice(0, start)];
+  return { ...term, related: ordered.slice(0, 3).map((item) => item.id) };
 });

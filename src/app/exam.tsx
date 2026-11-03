@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QuestionCard } from '@/components/QuestionCard';
 import { T } from '@/components/Text';
 import { EXAM_COUNT, EXAM_SECONDS, gradeExam, pickExamQuestions } from '@/data/questions';
+import { useBank } from '@/state/bank';
 import { formatClock } from '@/state/logic';
 import { useProgress } from '@/state/progress';
 import { theme, shadow } from '@/theme';
@@ -14,6 +15,7 @@ import type { Question } from '@/types';
 export default function ExamScreen() {
   const insets = useSafeAreaInsets();
   const { recordAnswer, saveExam } = useProgress();
+  const { activeQuestions } = useBank();
   const [phase, setPhase] = useState<'intro' | 'quiz'>('intro');
   const [deck, setDeck] = useState<Question[]>([]);
   const [index, setIndex] = useState(0);
@@ -53,7 +55,8 @@ export default function ExamScreen() {
   }, [phase, remaining, startedAt, finish]);
 
   function start() {
-    const picked = pickExamQuestions(EXAM_COUNT);
+    const picked = pickExamQuestions(EXAM_COUNT, Math.random, activeQuestions);
+    if (picked.length === 0) return;
     answers.current = picked.map(() => null);
     finished.current = false;
     setDeck(picked);
@@ -79,7 +82,7 @@ export default function ExamScreen() {
             {EXAM_COUNT} 题 · {EXAM_SECONDS / 60} 分钟
           </T>
           <T style={styles.introBody}>
-            题目从全部章节里随机抽，题型和章节练习一样：英文选义、中文选词、例句填空。
+            题目只从已添加的科目里抽，最多 {EXAM_COUNT} 题。当前题库 {activeQuestions.length} 题。
           </T>
           <View style={styles.rules}>
             <Rule text="每题四个选项，点选之后才显示对错和解析。" />

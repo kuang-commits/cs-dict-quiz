@@ -7,17 +7,19 @@ import { T } from '@/components/Text';
 import { terms } from '@/data/terms';
 import { examPoints } from '@/state/logic';
 import { useProgress } from '@/state/progress';
-import { theme, shadow } from '@/theme';
+import { shadow, theme as darkFallback, useTheme, useThemeMode } from '@/theme';
 
 export default function MeScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const { mode, toggle } = useThemeMode();
   const { data, accuracy, wrongCount, dueCount } = useProgress();
   const learned = data.learnedTermIds.length;
   const vocabCount = Object.keys(data.vocab).length;
   const accuracyText = accuracy === null ? '—' : `${Math.round(accuracy * 100)}%`;
 
   return (
-    <ScrollView style={styles.page} contentContainerStyle={{ paddingBottom: 28 }} testID="me-screen">
+    <ScrollView style={[styles.page, { backgroundColor: theme.bg }]} contentContainerStyle={{ paddingBottom: 28 }} testID="me-screen">
       <View style={[styles.header, { paddingTop: insets.top + 18 }]}>
         <T color="#D7EFE6">学习进度</T>
         <T bold color={theme.white} style={styles.title}>
@@ -49,6 +51,14 @@ export default function MeScreen() {
         累计作答 {data.answered} 题。答对一次，这个术语就记入已学。
         {data.lastExam ? ` 上次模拟考 ${examPoints(data.lastExam)} 分。` : ''}
       </T>
+      <Pressable onPress={() => router.push('/subjects')} style={styles.row} testID="open-subjects-me" accessibilityRole="button">
+        <T bold>科目</T>
+        <T color={theme.muted}>{data.subjectIds.length} 个</T>
+      </Pressable>
+      <Pressable onPress={toggle} style={styles.row} testID="theme-toggle-me" accessibilityRole="button">
+        <T bold>外观</T>
+        <T color={theme.muted}>{mode === 'dark' ? '深色' : '浅色'}</T>
+      </Pressable>
       <Pressable onPress={() => router.push('/me/vocab')} style={styles.row} testID="open-vocab" accessibilityRole="button">
         <T bold>生词本</T>
         <T color={theme.muted}>{vocabCount} 个</T>
@@ -62,6 +72,7 @@ export default function MeScreen() {
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
+  const theme = useTheme();
   return (
     <View style={styles.stat}>
       <T bold style={styles.statValue}>
@@ -75,9 +86,9 @@ function Stat({ value, label }: { value: string; label: string }) {
 }
 
 const styles = {
-  page: { flex: 1, backgroundColor: theme.bg },
+  page: { flex: 1, backgroundColor: darkFallback.bg },
   header: {
-    backgroundColor: theme.header,
+    backgroundColor: darkFallback.header,
     paddingHorizontal: 22,
     paddingBottom: 28,
     borderBottomLeftRadius: 28,
@@ -99,7 +110,7 @@ const styles = {
   due: {
     marginHorizontal: 16,
     marginTop: -18,
-    backgroundColor: theme.card,
+    backgroundColor: darkFallback.card,
     borderRadius: 18,
     padding: 16,
     flexDirection: 'row' as const,
@@ -111,7 +122,7 @@ const styles = {
   panel: {
     marginHorizontal: 16,
     marginTop: 12,
-    backgroundColor: theme.card,
+    backgroundColor: darkFallback.card,
     borderRadius: 18,
     padding: 16,
     flexDirection: 'row' as const,
@@ -125,7 +136,7 @@ const styles = {
   row: {
     marginHorizontal: 16,
     marginTop: 12,
-    backgroundColor: theme.card,
+    backgroundColor: darkFallback.card,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 16,

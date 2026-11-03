@@ -5,24 +5,31 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { T } from '@/components/Text';
 import { useProgress } from '@/state/progress';
-import { theme, shadow } from '@/theme';
+import { shadow, theme as darkFallback, useTheme } from '@/theme';
 
 export default function QuizHome() {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const { wrongCount, accuracy, data } = useProgress();
   const accuracyText = accuracy === null ? '还没开始' : `正确率 ${Math.round(accuracy * 100)}%`;
 
   return (
     <ScrollView
-      style={styles.page}
+      style={[styles.page, { backgroundColor: theme.bg }]}
       contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 28 }}
       testID="quiz-home"
     >
-      <View style={styles.header}>
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
         <T bold style={styles.title}>
           刷题
         </T>
         <T color={theme.muted}>一题一屏。答完才看对错和解析。{accuracyText}，已做 {data.answered} 题。</T>
+        </View>
+        <Pressable onPress={() => router.push('/subjects')} testID="open-subjects" accessibilityRole="button" style={[styles.subjectButton, { borderColor: theme.line }]}>
+          <Ionicons name="add" size={18} color={theme.primary} />
+          <T bold color={theme.primary}>科目</T>
+        </Pressable>
       </View>
       <Pressable
         onPress={() => router.push('/quiz/practice')}
@@ -66,21 +73,23 @@ export default function QuizHome() {
 }
 
 function Icon({ name, color }: { name: keyof typeof Ionicons.glyphMap; color: string }) {
+  const theme = useTheme();
   return (
     <View style={[styles.icon, { backgroundColor: color }]}>
-      <Ionicons name={name} color={theme.white} size={18} />
+      <Ionicons name={name} color={theme.bg} size={18} />
     </View>
   );
 }
 
 const styles = {
-  page: { flex: 1, backgroundColor: theme.bg },
-  header: { paddingHorizontal: 20, gap: 6, marginBottom: 12 },
+  page: { flex: 1, backgroundColor: darkFallback.bg },
+  headerRow: { paddingHorizontal: 20, gap: 8, marginBottom: 12, flexDirection: 'row' as const, alignItems: 'center' as const },
+  subjectButton: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   title: { fontSize: 28 },
   card: {
     marginHorizontal: 16,
     marginBottom: 12,
-    backgroundColor: theme.card,
+    backgroundColor: darkFallback.card,
     borderRadius: 18,
     padding: 16,
     flexDirection: 'row' as const,

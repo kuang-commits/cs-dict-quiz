@@ -1,4 +1,15 @@
-import type { AnswerMode, AnswerResult, ExamResult, Persisted, Question, ReviewRating, VocabCard } from '@/types';
+import type {
+  AnswerMode,
+  AnswerResult,
+  ColorMode,
+  CustomSubject,
+  CustomTerm,
+  ExamResult,
+  Persisted,
+  Question,
+  ReviewRating,
+  VocabCard,
+} from '@/types';
 
 export const WRONG_RETRIES_TO_CLEAR = 2;
 export const REVIEW_INTERVALS = [1, 2, 4, 7, 15] as const;
@@ -6,7 +17,7 @@ const HISTORY_LIMIT = 12;
 
 export function emptyProgress(): Persisted {
   return {
-    version: 2,
+    version: 3,
     vocab: {},
     searchHistory: [],
     learnedTermIds: [],
@@ -17,6 +28,10 @@ export function emptyProgress(): Persisted {
     lastActiveDate: null,
     wrongs: {},
     lastExam: null,
+    subjectIds: [],
+    customSubjects: [],
+    customTerms: [],
+    colorMode: 'dark',
   };
 }
 
@@ -48,12 +63,16 @@ export function normalizeProgress(raw: unknown): Persisted {
     lastActiveDate?: unknown;
     wrongs?: Persisted['wrongs'];
     lastExam?: Persisted['lastExam'];
+    subjectIds?: unknown;
+    customSubjects?: unknown;
+    customTerms?: unknown;
+    colorMode?: unknown;
   };
-  if (value.version !== 1 && value.version !== 2) return base;
+  if (value.version !== 1 && value.version !== 2 && value.version !== 3) return base;
   const vocab = normalizeVocab(value.vocab);
   const today = dateKey(new Date());
   for (const id of stringList(value.favorites)) {
-    if (!vocab[id]) vocab[id] = { addedAt: 0, stage: 0, due: today };
+    if (!vocab[id]) vocab[id] = { addedAt: 0, stage: 0, due: today, origin: 'manual' };
   }
   return {
     ...base,
@@ -67,6 +86,10 @@ export function normalizeProgress(raw: unknown): Persisted {
     lastActiveDate: typeof value.lastActiveDate === 'string' ? value.lastActiveDate : null,
     wrongs: value.wrongs && typeof value.wrongs === 'object' ? value.wrongs : {},
     lastExam: value.lastExam ?? null,
+    subjectIds: stringList(value.subjectIds),
+    customSubjects: normalizeSubjects(value.customSubjects),
+    customTerms: normalizeCustomTerms(value.customTerms),
+    colorMode: value.colorMode === 'light' ? 'light' : 'dark',
   };
 }
 
@@ -79,6 +102,7 @@ function normalizeVocab(value: unknown): Record<string, VocabCard> {
       addedAt: numberOr(card.addedAt, 0),
       stage: numberOr(card.stage, 0),
       due: typeof card.due === 'string' ? card.due : dateKey(new Date()),
+      origin: card.origin === 'subject' ? 'subject' : 'manual',
     };
   }
   return vocab;
@@ -163,7 +187,7 @@ export function toggleVocab(prev: Persisted, termId: string, now = new Date()): 
     ...prev,
     vocab: {
       ...prev.vocab,
-      [termId]: { addedAt: now.getTime(), stage: 0, due: dateKey(now) },
+      [termId]: { addedAt: now.getTime(), stage: 0, due: dateKey(now), origin: 'manual' },
     },
   };
 }
@@ -214,6 +238,93 @@ export function rememberSearch(prev: Persisted, query: string): Persisted {
 
 export function clearSearchHistory(prev: Persisted): Persisted {
   return { ...prev, searchHistory: [] };
+}
+
+function normalizeSubjects(value: unknown): CustomSubject[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => {
+      const subject = item as Partial<CustomSubject>;
+      return {
+        id: typeof subject.id === 'string' ? subject.id : '',
+        name: typeof subject.name === 'string' ? subject.name : '',
+        createdAt: numberOr(subject.createdAt, 0),
+      };
+    })
+    .filter((subject) => subject.id && subject.name);
+}
+
+function normalizeCustomTerms(value: unknown): CustomTerm[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => {
+      const term = item as Partial<CustomTerm>;
+      return {
+        id: typeof term.id === 'string' ? term.id : '',
+        subjectId: typeof term.subjectId === 'string' ? term.subjectId : '',
+        english: typeof term.english === 'string' ? term.english : '',
+        pronunciation: typeof term.pronunciation === 'string' ? term.pronunciation : '',
+        chinese: typeof term.chinese === 'string' ? term.chinese : '',
+        example: typeof term.example === 'string' ? term.example : '',
+      };
+    })
+    .filter((term) => term.id && term.subjectId && term.english && term.chinese);
+}
+
+export function setColorMode(prev: Persisted, colorMode: ColorMode): Persisted {
+  return { ...prev, colorMode };
+}
+
+export function enrollSubject(prev: Persisted, subjectId: string, termIds: string[], now = new Date()): Persisted {
+  const vocab = { ...prev.vocab };
+  for (const id of termIds) {
+    if (!vocab[id]) {
+      vocab[id] = { addedAt: now.getTime(), stage: 0, due: dateKey(now), origin: 'subject' };
+    }
+  }
+  const subjectIds = prev.subjectIds.includes(subjectId) ? prev.subjectIds : [...prev.subjectIds, subjectId];
+  return { ...prev, subjectIds, vocab };
+}
+
+export function unenrollSubject(prev: Persisted, subjectId: string, termIds: string[]): Persisted {
+  const vocab = { ...prev.vocab };
+  for (const id of termIds) {
+    if (vocab[id]?.origin === 'subject') delete vocab[id];
+  }
+  return { ...prev, subjectIds: prev.subjectIds.filter((id) => id !== subjectId), vocab };
+}
+
+export function createCustomSubject(prev: Persisted, name: string, now = new Date()): Persisted {
+  const subject: CustomSubject = { id: `user-${now.getTime()}`, name: name.trim(), createdAt: now.getTime() };
+  if (!subject.name) return prev;
+  const subjectIds = prev.subjectIds.includes(subject.id) ? prev.subjectIds : [...prev.subjectIds, subject.id];
+  return { ...prev, customSubjects: [...prev.customSubjects, subject], subjectIds };
+}
+
+export function addCustomTerm(prev: Persisted, subjectId: string, input: Omit<CustomTerm, 'id' | 'subjectId'>, now = new Date()): Persisted {
+  const english = input.english.trim();
+  const chinese = input.chinese.trim();
+  if (!english || !chinese) return prev;
+  const example = input.example.includes(english) ? input.example.trim() : `${input.example.trim()} ${english}`.trim();
+  const term: CustomTerm = {
+    id: `custom-${now.getTime()}`,
+    subjectId,
+    english,
+    pronunciation: input.pronunciation.trim() || '自建',
+    chinese,
+    example,
+  };
+  const customTerms = [...prev.customTerms, term];
+  const vocab =
+    prev.subjectIds.includes(subjectId) && !prev.vocab[term.id]
+      ? {
+          ...prev.vocab,
+          [term.id]: { addedAt: now.getTime(), stage: 0, due: dateKey(now), origin: 'subject' as const },
+        }
+      : prev.vocab;
+  return { ...prev, customTerms, vocab };
 }
 
 export function examPoints(exam: Pick<ExamResult, 'correct' | 'total'>): number {

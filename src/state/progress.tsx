@@ -5,19 +5,24 @@ import { T } from '@/components/Text';
 import { theme } from '@/theme';
 import type { AnswerMode, AnswerResult, ExamResult, Persisted, Question, ReviewRating } from '@/types';
 import {
+  addCustomTerm,
   applyAnswer,
   clearSearchHistory,
+  createCustomSubject,
   dueVocabIds,
   emptyProgress,
+  enrollSubject,
   normalizeProgress,
   rateVocab,
   rememberSearch,
+  setColorMode,
   toggleVocab,
+  unenrollSubject,
 } from '@/state/logic';
 import { View } from 'react-native';
 
-const STORAGE_KEY = 'cs-dict-quiz-v2';
-const LEGACY_KEY = 'cs-dict-quiz-v1';
+const STORAGE_KEY = 'cs-dict-quiz-v3';
+const LEGACY_KEYS = ['cs-dict-quiz-v2', 'cs-dict-quiz-v1'];
 
 type ProgressValue = {
   ready: boolean;
@@ -31,6 +36,11 @@ type ProgressValue = {
   rateReview: (termId: string, rating: ReviewRating) => void;
   rememberSearch: (query: string) => void;
   clearSearchHistory: () => void;
+  enrollSubject: (subjectId: string, termIds: string[]) => void;
+  unenrollSubject: (subjectId: string, termIds: string[]) => void;
+  createSubject: (name: string) => string | null;
+  addTerm: (subjectId: string, input: { english: string; pronunciation: string; chinese: string; example: string }) => void;
+  setColorMode: (mode: import('@/types').ColorMode) => void;
 };
 
 const ProgressContext = createContext<ProgressValue | null>(null);
@@ -46,7 +56,13 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then(async (raw) => {
         if (cancelled) return;
-        const legacy = raw ? null : await AsyncStorage.getItem(LEGACY_KEY);
+        let legacy: string | null = null;
+        if (!raw) {
+          for (const key of LEGACY_KEYS) {
+            legacy = await AsyncStorage.getItem(key);
+            if (legacy) break;
+          }
+        }
         const source = raw ?? legacy;
         if (source) {
           try {
@@ -108,6 +124,41 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     setData(next);
   }, []);
 
+  const enroll = useCallback((subjectId: string, termIds: string[]) => {
+    const next = enrollSubject(dataRef.current, subjectId, termIds);
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
+  const unenroll = useCallback((subjectId: string, termIds: string[]) => {
+    const next = unenrollSubject(dataRef.current, subjectId, termIds);
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
+  const createSubject = useCallback((name: string) => {
+    const before = dataRef.current.customSubjects.length;
+    const next = createCustomSubject(dataRef.current, name);
+    dataRef.current = next;
+    setData(next);
+    return next.customSubjects.length > before ? next.customSubjects[next.customSubjects.length - 1].id : null;
+  }, []);
+
+  const addTerm = useCallback(
+    (subjectId: string, input: { english: string; pronunciation: string; chinese: string; example: string }) => {
+      const next = addCustomTerm(dataRef.current, subjectId, input);
+      dataRef.current = next;
+      setData(next);
+    },
+    [],
+  );
+
+  const setMode = useCallback((mode: import('@/types').ColorMode) => {
+    const next = setColorMode(dataRef.current, mode);
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
   const value = useMemo<ProgressValue>(
     () => ({
       ready,
@@ -121,8 +172,13 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       rateReview,
       rememberSearch: remember,
       clearSearchHistory: clearHistory,
+      enrollSubject: enroll,
+      unenrollSubject: unenroll,
+      createSubject,
+      addTerm,
+      setColorMode: setMode,
     }),
-    [ready, data, recordAnswer, saveExam, toggle, rateReview, remember, clearHistory],
+    [ready, data, recordAnswer, saveExam, toggle, rateReview, remember, clearHistory, enroll, unenroll, createSubject, addTerm, setMode],
   );
 
   if (!ready) {

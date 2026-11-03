@@ -5,21 +5,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QuestionCard } from '@/components/QuestionCard';
 import { T } from '@/components/Text';
-import { categoryById, isCategoryId } from '@/data/categories';
-import { questionsForCategory } from '@/data/questions';
+import { catalogById } from '@/data/subjects';
+import { termIdsForSubject, useBank } from '@/state/bank';
 import { useProgress } from '@/state/progress';
-import { theme } from '@/theme';
+import { theme as darkFallback, useTheme } from '@/theme';
 import { firstParam } from '@/utils';
 
 export default function ChapterQuiz() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ category: string }>();
+  const theme = useTheme();
   const categoryId = firstParam(params.category);
-  const valid = isCategoryId(categoryId);
-  const list = useMemo(() => (valid ? questionsForCategory(categoryId) : []), [categoryId, valid]);
+  const { data, recordAnswer } = useProgress();
+  const { activeQuestions } = useBank();
+  const ids = useMemo(() => new Set(termIdsForSubject(categoryId, data.customTerms)), [categoryId, data.customTerms]);
+  const list = useMemo(() => activeQuestions.filter((question) => ids.has(question.termId)), [activeQuestions, ids]);
+  const valid = list.length > 0;
   const [index, setIndex] = useState(0);
   const [note, setNote] = useState<string | null>(null);
-  const { recordAnswer } = useProgress();
   const question = list[index];
 
   useEffect(() => {
@@ -39,7 +42,7 @@ export default function ChapterQuiz() {
     );
   }
 
-  const category = categoryById[categoryId];
+  const category = { name: catalogById[categoryId]?.name ?? data.customSubjects.find((subject) => subject.id === categoryId)?.name ?? '章节' };
   const last = index >= list.length - 1;
 
   return (
@@ -69,17 +72,17 @@ export default function ChapterQuiz() {
 const styles = {
   page: {
     flex: 1,
-    backgroundColor: theme.bg,
+    backgroundColor: darkFallback.bg,
   },
   missing: {
     flex: 1,
-    backgroundColor: theme.bg,
+    backgroundColor: darkFallback.bg,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     gap: 16,
   },
   button: {
-    backgroundColor: theme.primary,
+    backgroundColor: darkFallback.primary,
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 12,

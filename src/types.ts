@@ -1,4 +1,14 @@
-export type CategoryId = 'network' | 'programming' | 'database' | 'os' | 'security' | 'web';
+export type CategoryId =
+  | 'network'
+  | 'programming'
+  | 'database'
+  | 'os'
+  | 'security'
+  | 'web'
+  | 'python'
+  | 'linux'
+  | 'ruankao'
+  | 'custom';
 
 export type ExampleSentence = {
   english: string;
@@ -58,16 +68,36 @@ export type ExamResult = {
   items: ExamItem[];
 };
 
+export type VocabOrigin = 'manual' | 'subject';
+
 export type VocabCard = {
   addedAt: number;
   stage: number;
   due: string;
+  origin: VocabOrigin;
 };
+
+export type CustomSubject = {
+  id: string;
+  name: string;
+  createdAt: number;
+};
+
+export type CustomTerm = {
+  id: string;
+  subjectId: string;
+  english: string;
+  pronunciation: string;
+  chinese: string;
+  example: string;
+};
+
+export type ColorMode = 'dark' | 'light';
 
 export type ReviewRating = 'know' | 'fuzzy' | 'forget';
 
 export type Persisted = {
-  version: 2;
+  version: 3;
   vocab: Record<string, VocabCard>;
   searchHistory: string[];
   learnedTermIds: string[];
@@ -78,6 +108,10 @@ export type Persisted = {
   lastActiveDate: string | null;
   wrongs: Record<string, WrongEntry>;
   lastExam: ExamResult | null;
+  subjectIds: string[];
+  customSubjects: CustomSubject[];
+  customTerms: CustomTerm[];
+  colorMode: ColorMode;
 };
 
 export type AnswerResult = {

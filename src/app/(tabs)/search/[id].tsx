@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { T } from '@/components/Text';
 import { categoryById } from '@/data/categories';
-import { termById } from '@/data/questions';
+import { useBank } from '@/state/bank';
 import { useProgress } from '@/state/progress';
 import { theme, shadow } from '@/theme';
 import { firstParam } from '@/utils';
@@ -15,6 +15,7 @@ import { firstParam } from '@/utils';
 export default function TermCardScreen() {
   const insets = useSafeAreaInsets();
   const id = firstParam(useLocalSearchParams<{ id: string }>().id);
+  const { termById } = useBank();
   const term = termById[id];
   const { data, toggleVocab } = useProgress();
   const [voice, setVoice] = useState<'uk' | 'us' | null>(null);

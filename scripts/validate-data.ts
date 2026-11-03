@@ -1,4 +1,5 @@
 import { CATEGORIES } from '../src/data/categories';
+import { CATALOG } from '../src/data/subjects';
 import { questions, questionsForCategory, suggestTerms } from '../src/data/questions';
 import { terms } from '../src/data/terms';
 import { applyAnswer, emptyProgress, rateVocab, toggleVocab } from '../src/state/logic';
@@ -39,6 +40,7 @@ for (const term of terms) {
 }
 
 for (const category of CATEGORIES) {
+  if (category.id === 'custom') continue;
   const count = terms.filter((term) => term.category === category.id).length;
   check(count >= 8, `${category.name} 术语太少：${count}`);
 }
@@ -82,6 +84,13 @@ state = applyAnswer(state, sample, sample.answerIndex, 'wrong').state;
 check(!state.wrongs[sample.id], '连续做对 2 次后应移出');
 check(state.learnedTermIds.includes(sample.termId), '答对后应记入已学');
 check(state.streak === 1, '当天首次作答应开始连续学习');
+
+for (const subject of CATALOG) {
+  const count = terms.filter((term) => term.category === subject.categoryId).length;
+  const questionCount = questions.filter((question) => question.category === subject.categoryId).length;
+  check(count >= 15, `${subject.name} 术语不足 15，实际 ${count}`);
+  check(questionCount >= 20, `${subject.name} 题目不足 20，实际 ${questionCount}`);
+}
 
 check(suggestTerms('htp')[0]?.id === 'http', 'htp 应模糊匹配到 HTTP');
 check(suggestTerms('超文本')[0]?.id === 'http', '中文片段应匹配 HTTP');

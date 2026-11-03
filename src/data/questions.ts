@@ -39,9 +39,9 @@ function shuffle<T>(items: T[], seed: number): T[] {
   return copy;
 }
 
-function distractors(term: Term, field: 'english' | 'chinese', seed: number): string[] {
-  const same = terms.filter((item) => item.id !== term.id && item.category === term.category);
-  const other = terms.filter((item) => item.id !== term.id && item.category !== term.category);
+function distractors(pool: Term[], term: Term, field: 'english' | 'chinese', seed: number): string[] {
+  const same = pool.filter((item) => item.id !== term.id && item.category === term.category);
+  const other = pool.filter((item) => item.id !== term.id && item.category !== term.category);
   const ordered = [...shuffle(same, seed), ...shuffle(other, seed + 17)];
   const picked: string[] = [];
   const correct = term[field];
@@ -63,10 +63,10 @@ function blankExample(example: string, english: string): string {
   return `${example.slice(0, at)}____${example.slice(at + english.length)}`;
 }
 
-function buildQuestion(term: Term, type: QuestionType): Question {
+function buildQuestion(pool: Term[], term: Term, type: QuestionType): Question {
   const seed = hash(`${term.id}:${type}`);
   if (type === 'en-to-zh') {
-    const options = distractors(term, 'chinese', seed);
+    const options = distractors(pool, term, 'chinese', seed);
     const answerIndex = seed % 4;
     options.splice(answerIndex, 0, term.chinese);
     return {
@@ -83,7 +83,7 @@ function buildQuestion(term: Term, type: QuestionType): Question {
     };
   }
   if (type === 'zh-to-en') {
-    const options = distractors(term, 'english', seed);
+    const options = distractors(pool, term, 'english', seed);
     const answerIndex = seed % 4;
     options.splice(answerIndex, 0, term.english);
     return {
@@ -98,7 +98,7 @@ function buildQuestion(term: Term, type: QuestionType): Question {
       explanation: `「${term.chinese}」写成英文是 ${term.english}，可以按「${term.pronunciation}」来记读音。`,
     };
   }
-  const options = distractors(term, 'english', seed);
+  const options = distractors(pool, term, 'english', seed);
   const answerIndex = seed % 4;
   options.splice(answerIndex, 0, term.english);
   return {
@@ -115,9 +115,9 @@ function buildQuestion(term: Term, type: QuestionType): Question {
   };
 }
 
-export function buildQuestions(source: Term[] = terms): Question[] {
+export function buildQuestions(source: Term[] = terms, pool: Term[] = source): Question[] {
   const types: QuestionType[] = ['en-to-zh', 'zh-to-en', 'fill-in'];
-  return source.flatMap((term) => types.map((type) => buildQuestion(term, type)));
+  return source.flatMap((term) => types.map((type) => buildQuestion(pool, term, type)));
 }
 
 export const questions = buildQuestions();
@@ -129,8 +129,13 @@ export function questionsForCategory(category: Term['category']): Question[] {
   return questions.filter((question) => question.category === category);
 }
 
-export function pickExamQuestions(count = EXAM_COUNT, random: () => number = Math.random): Question[] {
-  return shuffle(questions, Math.floor(random() * 0xffffffff) || 1).slice(0, count);
+export function pickExamQuestions(
+  count = EXAM_COUNT,
+  random: () => number = Math.random,
+  pool: Question[] = questions,
+): Question[] {
+  const size = Math.min(count, pool.length);
+  return shuffle(pool, Math.floor(random() * 0xffffffff) || 1).slice(0, size);
 }
 
 export function gradeExam(items: ExamItem[], elapsedSec: number, timedOut: boolean, now = Date.now()): ExamResult {
