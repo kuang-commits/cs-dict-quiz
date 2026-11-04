@@ -17,7 +17,7 @@ const HISTORY_LIMIT = 12;
 
 export function emptyProgress(): Persisted {
   return {
-    version: 3,
+    version: 4,
     vocab: {},
     searchHistory: [],
     learnedTermIds: [],
@@ -32,6 +32,8 @@ export function emptyProgress(): Persisted {
     customSubjects: [],
     customTerms: [],
     colorMode: 'dark',
+    codingSolved: [],
+    codingWrongs: {},
   };
 }
 
@@ -67,8 +69,10 @@ export function normalizeProgress(raw: unknown): Persisted {
     customSubjects?: unknown;
     customTerms?: unknown;
     colorMode?: unknown;
+    codingSolved?: unknown;
+    codingWrongs?: unknown;
   };
-  if (value.version !== 1 && value.version !== 2 && value.version !== 3) return base;
+  if (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4) return base;
   const vocab = normalizeVocab(value.vocab);
   const today = dateKey(new Date());
   for (const id of stringList(value.favorites)) {
@@ -90,7 +94,30 @@ export function normalizeProgress(raw: unknown): Persisted {
     customSubjects: normalizeSubjects(value.customSubjects),
     customTerms: normalizeCustomTerms(value.customTerms),
     colorMode: value.colorMode === 'light' ? 'light' : 'dark',
+    codingSolved: stringList(value.codingSolved),
+    codingWrongs: normalizeCodingWrongs(value.codingWrongs),
   };
+}
+
+function normalizeCodingWrongs(value: unknown): Record<string, { updatedAt: number }> {
+  if (!value || typeof value !== 'object') return {};
+  const wrongs: Record<string, { updatedAt: number }> = {};
+  for (const [id, entry] of Object.entries(value as Record<string, { updatedAt?: number }>)) {
+    wrongs[id] = { updatedAt: numberOr(entry?.updatedAt, 0) };
+  }
+  return wrongs;
+}
+
+export function recordCoding(prev: Persisted, problemId: string, passed: boolean, now = new Date()): Persisted {
+  const codingWrongs = { ...prev.codingWrongs };
+  const solved = new Set(prev.codingSolved);
+  if (passed) {
+    delete codingWrongs[problemId];
+    solved.add(problemId);
+  } else {
+    codingWrongs[problemId] = { updatedAt: now.getTime() };
+  }
+  return { ...prev, codingWrongs, codingSolved: [...solved] };
 }
 
 function normalizeVocab(value: unknown): Record<string, VocabCard> {

@@ -14,6 +14,7 @@ import {
   enrollSubject,
   normalizeProgress,
   rateVocab,
+  recordCoding,
   rememberSearch,
   setColorMode,
   toggleVocab,
@@ -41,6 +42,7 @@ type ProgressValue = {
   createSubject: (name: string) => string | null;
   addTerm: (subjectId: string, input: { english: string; pronunciation: string; chinese: string; example: string }) => void;
   setColorMode: (mode: import('@/types').ColorMode) => void;
+  recordCoding: (problemId: string, passed: boolean) => void;
 };
 
 const ProgressContext = createContext<ProgressValue | null>(null);
@@ -153,6 +155,12 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const recordCode = useCallback((problemId: string, passed: boolean) => {
+    const next = recordCoding(dataRef.current, problemId, passed);
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
   const setMode = useCallback((mode: import('@/types').ColorMode) => {
     const next = setColorMode(dataRef.current, mode);
     dataRef.current = next;
@@ -177,8 +185,9 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       createSubject,
       addTerm,
       setColorMode: setMode,
+      recordCoding: recordCode,
     }),
-    [ready, data, recordAnswer, saveExam, toggle, rateReview, remember, clearHistory, enroll, unenroll, createSubject, addTerm, setMode],
+    [ready, data, recordAnswer, saveExam, toggle, rateReview, remember, clearHistory, enroll, unenroll, createSubject, addTerm, setMode, recordCode],
   );
 
   if (!ready) {

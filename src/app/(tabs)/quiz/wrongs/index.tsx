@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { T } from '@/components/Text';
 import { categoryById } from '@/data/categories';
+import { codingProblemById } from '@/data/coding-problems';
 import { questionById, TYPE_LABEL } from '@/data/questions';
 import { WRONG_RETRIES_TO_CLEAR } from '@/state/logic';
 import { useProgress } from '@/state/progress';
@@ -12,6 +13,10 @@ import { theme, shadow } from '@/theme';
 export default function WrongBookScreen() {
   const insets = useSafeAreaInsets();
   const { data } = useProgress();
+  const codingItems = Object.entries(data.codingWrongs)
+    .map(([id, entry]) => ({ id, entry, problem: codingProblemById[id] }))
+    .filter((item) => item.problem)
+    .sort((left, right) => right.entry.updatedAt - left.entry.updatedAt);
   const items = Object.entries(data.wrongs)
     .map(([id, entry]) => ({ id, entry, question: questionById[id] }))
     .filter((item) => item.question)
@@ -27,7 +32,7 @@ export default function WrongBookScreen() {
           做错的题会留在这里。同一题连续做对 {WRONG_RETRIES_TO_CLEAR} 次后移出。章节练习里再答对，不会提前移出。
         </T>
       </View>
-      {items.length === 0 ? (
+      {items.length === 0 && codingItems.length === 0 ? (
         <View style={styles.empty}>
           <T bold style={styles.emptyTitle}>
             还没有错题
@@ -44,6 +49,25 @@ export default function WrongBookScreen() {
       ) : (
         <>
           <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.list} testID="wrong-list">
+            {codingItems.map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() => router.push(`/quiz/coding/${item.id}`)}
+                style={styles.card}
+                testID={`coding-wrong-${item.id}`}
+                accessibilityRole="button"
+              >
+                <T color={theme.accent} style={styles.meta}>
+                  编程题
+                </T>
+                <T bold style={styles.headline}>
+                  {item.problem.title}
+                </T>
+                <T color={theme.wrong} style={styles.left}>
+                  提交未通过
+                </T>
+              </Pressable>
+            ))}
             {items.map((item) => {
               const question = item.question;
               const left = WRONG_RETRIES_TO_CLEAR - item.entry.correctRetries;

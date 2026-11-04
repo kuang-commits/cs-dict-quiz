@@ -55,6 +55,20 @@ export default function QuizHome() {
         </View>
       </Pressable>
       <Pressable
+        onPress={() => router.push('/quiz/coding')}
+        testID="open-coding"
+        accessibilityRole="button"
+        style={styles.card}
+      >
+        <Icon name="code-slash" color={theme.accent} />
+        <View style={styles.copy}>
+          <T bold style={styles.cardTitle}>
+            编程题
+          </T>
+          <T color={theme.muted}>像在线编程题一样写 Python 或 JavaScript</T>
+        </View>
+      </Pressable>
+      <Pressable
         onPress={() => router.push('/quiz/wrongs')}
         testID="open-wrongs"
         accessibilityRole="button"

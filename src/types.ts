@@ -96,8 +96,12 @@ export type ColorMode = 'dark' | 'light';
 
 export type ReviewRating = 'know' | 'fuzzy' | 'forget';
 
+export type CodingWrong = {
+  updatedAt: number;
+};
+
 export type Persisted = {
-  version: 3;
+  version: 4;
   vocab: Record<string, VocabCard>;
   searchHistory: string[];
   learnedTermIds: string[];
@@ -112,6 +116,8 @@ export type Persisted = {
   customSubjects: CustomSubject[];
   customTerms: CustomTerm[];
   colorMode: ColorMode;
+  codingSolved: string[];
+  codingWrongs: Record<string, CodingWrong>;
 };
 
 export type AnswerResult = {
