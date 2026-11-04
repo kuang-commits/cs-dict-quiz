@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T } from '@/components/Text';
 import { questionById } from '@/data/questions';
 import { examPoints, formatClock } from '@/state/logic';
+import { EXAM_PASS_LINE } from '@/state/scoring';
 import { useProgress } from '@/state/progress';
 import { theme, shadow } from '@/theme';
 
@@ -45,6 +46,9 @@ export default function ScoreScreen() {
           </T>
         </T>
         <T style={styles.accuracy}>正确率 {accuracy}% · 用时 {formatClock(exam.elapsedSec)}</T>
+        <T bold color={points >= EXAM_PASS_LINE ? theme.primary : theme.wrong} testID="exam-pass-line">
+          及格线 {EXAM_PASS_LINE} 分 · {points >= EXAM_PASS_LINE ? '合格' : '未及格'}
+        </T>
         {exam.timedOut ? <T color={theme.wrong}>倒计时结束，已自动交卷。</T> : null}
         <View style={styles.summary}>
           <Mini label="答对" value={String(exam.correct)} color={theme.primary} />

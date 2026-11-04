@@ -101,7 +101,7 @@ export type CodingWrong = {
 };
 
 export type Persisted = {
-  version: 4;
+  version: 5;
   vocab: Record<string, VocabCard>;
   searchHistory: string[];
   learnedTermIds: string[];
@@ -118,6 +118,16 @@ export type Persisted = {
   colorMode: ColorMode;
   codingSolved: string[];
   codingWrongs: Record<string, CodingWrong>;
+  totalXp: number;
+  todayXp: number;
+  todayKey: string | null;
+  dailyGoal: 10 | 20 | 30 | 50;
+  hearts: number;
+  heartsDate: string | null;
+  weekKey: string | null;
+  weeklyXp: number;
+  lessonsCompleted: number;
+  achievements: string[];
 };
 
 export type AnswerResult = {

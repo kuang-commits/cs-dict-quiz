@@ -14,7 +14,7 @@ import type { Question } from '@/types';
 
 export default function ExamScreen() {
   const insets = useSafeAreaInsets();
-  const { recordAnswer, saveExam } = useProgress();
+  const { awardAnswer, saveExam } = useProgress();
   const { activeQuestions } = useBank();
   const [phase, setPhase] = useState<'intro' | 'quiz'>('intro');
   const [deck, setDeck] = useState<Question[]>([]);
@@ -122,7 +122,7 @@ export default function ExamScreen() {
         onAnswer={(choice) => {
           if (answers.current[index] !== null) return;
           answers.current[index] = choice;
-          recordAnswer(question, choice, 'exam');
+          awardAnswer(question, choice, 'exam', 0);
         }}
         onNext={() => {
           if (last) setConfirm(true);

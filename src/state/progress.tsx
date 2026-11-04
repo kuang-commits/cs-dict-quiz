@@ -20,6 +20,7 @@ import {
   toggleVocab,
   unenrollSubject,
 } from '@/state/logic';
+import { addXp, answerXp, earnedAchievements, HEARTS_PER_DAY, PERFECT_BONUS, questionXp, starsFor, withDailyReset, type DailyGoal } from '@/state/scoring';
 import { View } from 'react-native';
 
 const STORAGE_KEY = 'cs-dict-quiz-v3';
@@ -43,6 +44,26 @@ type ProgressValue = {
   addTerm: (subjectId: string, input: { english: string; pronunciation: string; chinese: string; example: string }) => void;
   setColorMode: (mode: import('@/types').ColorMode) => void;
   recordCoding: (problemId: string, passed: boolean) => void;
+  awardAnswer: (
+    question: Question,
+    chosen: number,
+    mode: AnswerMode,
+    sessionStreak: number,
+  ) => AnswerResult & { xp: number; hearts: number };
+  finishLesson: (lesson: LessonResult) => void;
+  setDailyGoal: (goal: DailyGoal) => void;
+  lesson: LessonResult | null;
+};
+
+export type LessonResult = {
+  title: string;
+  correct: number;
+  total: number;
+  xp: number;
+  stars: 0 | 1 | 2 | 3;
+  seconds: number;
+  mistakeIds: string[];
+  heartsLeft: number;
 };
 
 const ProgressContext = createContext<ProgressValue | null>(null);
@@ -50,6 +71,7 @@ const ProgressContext = createContext<ProgressValue | null>(null);
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Persisted>(emptyProgress);
   const [ready, setReady] = useState(false);
+  const [lesson, setLesson] = useState<LessonResult | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -68,7 +90,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
         const source = raw ?? legacy;
         if (source) {
           try {
-            setData(normalizeProgress(JSON.parse(source)));
+            setData(withDailyReset(normalizeProgress(JSON.parse(source))));
           } catch {
             setData(emptyProgress());
           }
@@ -155,6 +177,39 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const awardAnswer = useCallback((question: Question, chosen: number, mode: AnswerMode, sessionStreak: number) => {
+    const refreshed = withDailyReset(dataRef.current);
+    const applied = applyAnswer(refreshed, question, chosen, mode);
+    let state = applied.state;
+    const xp =
+      mode === 'exam'
+        ? questionXp(question.type) * (applied.result.isCorrect ? 1 : 0)
+        : answerXp(question.type, applied.result.isCorrect, sessionStreak);
+    if (mode === 'chapter' && !applied.result.isCorrect) state = { ...state, hearts: Math.max(0, state.hearts - 1) };
+    if (mode === 'wrong' && applied.result.isCorrect) state = { ...state, hearts: Math.min(HEARTS_PER_DAY, state.hearts + 1) };
+    state = addXp(state, xp);
+    state = { ...state, achievements: earnedAchievements(state) };
+    dataRef.current = state;
+    setData(state);
+    return { ...applied.result, xp, hearts: state.hearts };
+  }, []);
+
+  const finishLesson = useCallback((draft: LessonResult) => {
+    const bonus = draft.total > 0 && draft.correct === draft.total ? PERFECT_BONUS : 0;
+    let state = addXp(dataRef.current, bonus);
+    state = { ...state, lessonsCompleted: state.lessonsCompleted + 1, achievements: earnedAchievements({ ...state, lessonsCompleted: state.lessonsCompleted + 1 }) };
+    state = { ...state, achievements: earnedAchievements(state) };
+    dataRef.current = state;
+    setData(state);
+    setLesson({ ...draft, xp: draft.xp + bonus, stars: starsFor(draft.total === 0 ? 0 : Math.round((draft.correct / draft.total) * 100)) });
+  }, []);
+
+  const setDailyGoal = useCallback((goal: DailyGoal) => {
+    const next = { ...dataRef.current, dailyGoal: goal };
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
   const recordCode = useCallback((problemId: string, passed: boolean) => {
     const next = recordCoding(dataRef.current, problemId, passed);
     dataRef.current = next;
@@ -186,8 +241,12 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       addTerm,
       setColorMode: setMode,
       recordCoding: recordCode,
+      awardAnswer,
+      finishLesson,
+      setDailyGoal,
+      lesson,
     }),
-    [ready, data, recordAnswer, saveExam, toggle, rateReview, remember, clearHistory, enroll, unenroll, createSubject, addTerm, setMode, recordCode],
+    [ready, data, recordAnswer, saveExam, toggle, rateReview, remember, clearHistory, enroll, unenroll, createSubject, addTerm, setMode, recordCode, awardAnswer, finishLesson, setDailyGoal, lesson],
   );
 
   if (!ready) {

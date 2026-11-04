@@ -1,3 +1,4 @@
+import { addXp, CODING_PASS_XP, earnedAchievements } from '@/state/scoring';
 import type {
   AnswerMode,
   AnswerResult,
@@ -17,7 +18,7 @@ const HISTORY_LIMIT = 12;
 
 export function emptyProgress(): Persisted {
   return {
-    version: 4,
+    version: 5,
     vocab: {},
     searchHistory: [],
     learnedTermIds: [],
@@ -34,6 +35,16 @@ export function emptyProgress(): Persisted {
     colorMode: 'dark',
     codingSolved: [],
     codingWrongs: {},
+    totalXp: 0,
+    todayXp: 0,
+    todayKey: null,
+    dailyGoal: 20,
+    hearts: 5,
+    heartsDate: null,
+    weekKey: null,
+    weeklyXp: 0,
+    lessonsCompleted: 0,
+    achievements: [],
   };
 }
 
@@ -71,8 +82,18 @@ export function normalizeProgress(raw: unknown): Persisted {
     colorMode?: unknown;
     codingSolved?: unknown;
     codingWrongs?: unknown;
+    totalXp?: unknown;
+    todayXp?: unknown;
+    todayKey?: unknown;
+    dailyGoal?: unknown;
+    hearts?: unknown;
+    heartsDate?: unknown;
+    weekKey?: unknown;
+    weeklyXp?: unknown;
+    lessonsCompleted?: unknown;
+    achievements?: unknown;
   };
-  if (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4) return base;
+  if (![1, 2, 3, 4, 5].includes(value.version ?? 0)) return base;
   const vocab = normalizeVocab(value.vocab);
   const today = dateKey(new Date());
   for (const id of stringList(value.favorites)) {
@@ -96,6 +117,16 @@ export function normalizeProgress(raw: unknown): Persisted {
     colorMode: value.colorMode === 'light' ? 'light' : 'dark',
     codingSolved: stringList(value.codingSolved),
     codingWrongs: normalizeCodingWrongs(value.codingWrongs),
+    totalXp: numberOr(value.totalXp, 0),
+    todayXp: numberOr(value.todayXp, 0),
+    todayKey: typeof value.todayKey === 'string' ? value.todayKey : null,
+    dailyGoal: value.dailyGoal === 10 || value.dailyGoal === 20 || value.dailyGoal === 30 || value.dailyGoal === 50 ? value.dailyGoal : 20,
+    hearts: numberOr(value.hearts, 5),
+    heartsDate: typeof value.heartsDate === 'string' ? value.heartsDate : null,
+    weekKey: typeof value.weekKey === 'string' ? value.weekKey : null,
+    weeklyXp: numberOr(value.weeklyXp, 0),
+    lessonsCompleted: numberOr(value.lessonsCompleted, 0),
+    achievements: stringList(value.achievements),
   };
 }
 
@@ -117,7 +148,11 @@ export function recordCoding(prev: Persisted, problemId: string, passed: boolean
   } else {
     codingWrongs[problemId] = { updatedAt: now.getTime() };
   }
-  return { ...prev, codingWrongs, codingSolved: [...solved] };
+  const scored = { ...prev, codingWrongs, codingSolved: [...solved] };
+  if (passed && !prev.codingSolved.includes(problemId)) {
+    return { ...addXp(scored, CODING_PASS_XP, now), achievements: earnedAchievements({ ...scored, totalXp: scored.totalXp + CODING_PASS_XP }) };
+  }
+  return { ...scored, achievements: earnedAchievements(scored) };
 }
 
 function normalizeVocab(value: unknown): Record<string, VocabCard> {

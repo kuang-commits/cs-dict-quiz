@@ -13,7 +13,7 @@ import { theme } from '@/theme';
 
 export default function WrongQuiz() {
   const insets = useSafeAreaInsets();
-  const { data, recordAnswer } = useProgress();
+  const { data, awardAnswer } = useProgress();
   const ids = useMemo(
     () =>
       Object.entries(data.wrongs)
@@ -65,13 +65,13 @@ export default function WrongQuiz() {
         onBack={() => router.back()}
         nextLabel={last ? '完成本轮' : '下一题'}
         onAnswer={(choice) => {
-          const result = recordAnswer(question, choice, 'wrong');
+          const result = awardAnswer(question, choice, 'wrong', choice === question.answerIndex ? 1 : 0);
           if (!result.isCorrect) {
             setNote('连续做对次数已清零，这题还留在错题本。');
           } else if (result.removed) {
-            setNote(`连续做对 ${WRONG_RETRIES_TO_CLEAR} 次，已从错题本移出。`);
+            setNote(`连续做对 ${WRONG_RETRIES_TO_CLEAR} 次，已从错题本移出。答对找回 1 颗爱心。`);
           } else {
-            setNote(`做对了。再连续做对 ${WRONG_RETRIES_TO_CLEAR - result.correctRetries} 次就会移出。`);
+            setNote(`做对了，找回 1 颗爱心。再连续做对 ${WRONG_RETRIES_TO_CLEAR - result.correctRetries} 次就会移出。`);
           }
         }}
         onNext={() => {

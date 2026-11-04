@@ -21,6 +21,7 @@ type Props = {
   onBack?: () => void;
   backLabel?: string;
   headerRight?: React.ReactNode;
+  toolbar?: React.ReactNode;
 };
 
 export function QuestionCard({
@@ -35,6 +36,7 @@ export function QuestionCard({
   onBack,
   backLabel = '返回',
   headerRight,
+  toolbar,
 }: Props) {
   const [chosen, setChosen] = useState<number | null>(null);
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -76,6 +78,7 @@ export function QuestionCard({
         </T>
         <View style={[styles.side, styles.sideRight]}>{headerRight}</View>
       </View>
+      {toolbar}
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${(index / total) * 100}%` }]} />
       </View>
