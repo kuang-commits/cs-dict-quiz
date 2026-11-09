@@ -86,13 +86,13 @@ npm run typecheck
 
 ## 打 iOS 安装包
 
-内部试用包用 Expo EAS。需要 Apple Developer Program 和 Expo 账号。在项目根目录执行：
+内部试用包用 Expo EAS。真机 IPA（`preview`）需要 Apple Developer Program。没有该账号时，用模拟器配置，产物只能拖进 Mac 的 Simulator，不能装到 iPhone：
 
 ```bash
-npx eas-cli build -p ios --profile preview
+npx eas-cli build -p ios --profile preview-simulator
 ```
 
-`preview` 打的是 Ad Hoc / 内部安装用的 IPA。证书、描述文件和 `.env` 里的密钥不要提交到仓库。步骤写在 [docs/ios-build.md](docs/ios-build.md)。
+需要一个免费的 [Expo 账号](https://expo.dev/signup)。证书、描述文件和 `.env` 里的密钥不要提交到仓库。步骤写在 [docs/ios-build.md](docs/ios-build.md)。
 
 ## 这一版没有做的
 

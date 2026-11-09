@@ -21,6 +21,35 @@ npx eas-cli build -p ios --profile preview
 
 `development` 配置会打带开发客户端的内部包，用来连本地 `npx expo start`。日常试用用 `preview` 即可。
 
+## 没有 Apple Developer 账号：只打模拟器包
+
+`preview` 的 IPA 装不到没有开发者证书的真机。没有付费 Apple Developer Program 时，用 `preview-simulator`。它在 `eas.json` 里设置了 `ios.simulator: true`，不需要 Apple 登录，产物是给 Mac 上 iOS 模拟器的 `.app`，不能安装到物理 iPhone。
+
+仍需要一个免费的 [Expo 账号](https://expo.dev/signup)。在项目根目录：
+
+```bash
+npm install
+npx eas-cli login
+npx eas-cli build -p ios --profile preview-simulator
+```
+
+第一次构建如果提示创建 EAS 项目，同意即可。它会把 `extra.eas.projectId` 写进配置，这是项目编号，不是密码。
+
+构建结束后，终端会给出下载地址，也可以在 https://expo.dev 的该次构建页下载。文件一般是 `.tar.gz`。在 Mac 上解压并打开模拟器：
+
+```bash
+tar -xzf 下载的文件.tar.gz
+open -a Simulator
+```
+
+把解压出来的 `.app` 拖进已经打开的模拟器窗口。也可以在模拟器启动后执行：
+
+```bash
+xcrun simctl install booted ./解压出来的.app
+```
+
+这个包只在模拟器里运行。拖到 iPhone、用隔空投送或用描述文件安装都会失败。要装到真机，仍需 Apple Developer Program，并用 `npx eas-cli build -p ios --profile preview`。
+
 ## 密钥不要进仓库
 
 - 不要把 `.p12`、`.p8`、`.mobileprovision`、Apple 密码或 Expo token 提交到 git。证书交给 EAS 保管即可。
