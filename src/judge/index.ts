@@ -1,3 +1,4 @@
+import { JUDGE_DEGRADE_HINT, JudgeServiceError } from '@/judge/errors';
 import { configuredJudge0 } from '@/judge/judge0';
 import { localJavaScriptJudge } from '@/judge/local-js';
 import { configuredPiston } from '@/judge/piston';
@@ -19,18 +20,18 @@ export async function execute(language: CodingLanguage, userSource: string, stdi
     stdin,
   };
   const judges = selectJudges(language);
-  let lastError = '没有可用的判题器';
+  let lastError = `没有可用的判题器。${JUDGE_DEGRADE_HINT}`;
   for (const judge of judges) {
     try {
       if (judge.id === 'local-js') return localJavaScriptJudge.run({ ...request, source: userSource });
       return await judge.run(request);
     } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
+      lastError = error instanceof JudgeServiceError ? error.message : error instanceof Error ? error.message : String(error);
     }
   }
   return {
     stdout: '',
-    stderr: language === 'python' ? `${lastError}。JavaScript 可以离线运行；Python 需要可访问的 Judge0 或自建 Piston。` : lastError,
+    stderr: lastError.includes('不是本应用坏了') ? lastError : `${lastError} ${JUDGE_DEGRADE_HINT}`,
     exitCode: 1,
     timeMs: 0,
     engine: 'unavailable',

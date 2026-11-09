@@ -63,6 +63,9 @@ export default function CodingListScreen() {
                   <T color={solved ? theme.primary : wrong ? theme.wrong : theme.muted} style={{ marginTop: 4 }}>
                     {solved ? '已通过' : wrong ? '提交未通过' : '未作答'} · {problem.sampleTests.length} 个样例
                   </T>
+                  <View testID={`online-badge-${problem.id}`} style={{ alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme.chip, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <T style={{ fontSize: 12 }}>需联网 · Python</T>
+                  </View>
                 </Pressable>
               );
             })}

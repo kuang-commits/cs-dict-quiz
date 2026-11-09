@@ -1,4 +1,5 @@
 import { pistonSettings } from '@/judge/config';
+import { fetchJudge } from '@/judge/errors';
 import type { CodeJudge, JudgeRequest, JudgeResponse } from '@/judge/types';
 
 const VERSIONS: Record<JudgeRequest['language'], string> = {
@@ -17,7 +18,7 @@ export function createPiston(url: string): CodeJudge {
     supports: () => true,
     async run(request: JudgeRequest): Promise<JudgeResponse> {
       const started = Date.now();
-      const response = await fetch(`${url}/api/v2/piston/execute`, {
+      const response = await fetchJudge(`${url}/api/v2/piston/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -28,7 +29,6 @@ export function createPiston(url: string): CodeJudge {
           run_timeout: 2000,
         }),
       });
-      if (!response.ok) throw new Error(`Piston 返回 ${response.status}`);
       const body = (await response.json()) as {
         message?: string;
         run?: { stdout?: string; stderr?: string; code?: number; signal?: string };

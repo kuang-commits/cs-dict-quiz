@@ -11,6 +11,7 @@ export type TestReport = {
   pass: boolean;
   timeMs: number;
   engine: string;
+  degraded: boolean;
 };
 
 function normalize(value: string): string {
@@ -28,6 +29,7 @@ async function runOne(language: CodingLanguage, source: string, test: CodingTest
     pass: result.exitCode === 0 && normalize(result.stdout) === normalize(test.expected),
     timeMs: result.timeMs,
     engine: result.engine,
+    degraded: result.engine === 'unavailable',
   };
 }
 

@@ -1,4 +1,5 @@
 import { JUDGE0_LANGUAGE_IDS, judge0Settings } from '@/judge/config';
+import { fetchJudge, judgeFailureMessage, JudgeServiceError } from '@/judge/errors';
 import type { CodeJudge, JudgeRequest, JudgeResponse } from '@/judge/types';
 
 type Submission = {
@@ -18,7 +19,7 @@ export function createJudge0(url: string, key: string): CodeJudge {
       const started = Date.now();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (key) headers['X-Auth-Token'] = key;
-      const response = await fetch(`${url}/submissions?base64_encoded=false&wait=true`, {
+      const response = await fetchJudge(`${url}/submissions?base64_encoded=false&wait=true`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -28,10 +29,11 @@ export function createJudge0(url: string, key: string): CodeJudge {
           cpu_time_limit: 2,
         }),
       });
-      if (!response.ok) {
-        throw new Error(`判题服务返回 ${response.status}`);
-      }
       const body = (await response.json()) as Submission;
+      const notice = [body.message, body.status?.description].filter(Boolean).join(' ');
+      if (/rate limit|too many requests/i.test(notice)) {
+        throw new JudgeServiceError('rate-limit', judgeFailureMessage('rate-limit'));
+      }
       const stderr = [body.stderr, body.compile_output, body.message].filter(Boolean).join('\n');
       const statusId = body.status?.id ?? 0;
       const accepted = statusId === 3;

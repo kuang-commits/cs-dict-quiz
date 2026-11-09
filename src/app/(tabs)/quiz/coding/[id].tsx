@@ -43,10 +43,12 @@ export default function CodingProblemScreen() {
     const result = await runTests(problem, language, code[language], nextMode);
     setReports(result);
     setRunning(false);
-    if (nextMode === 'submit') recordCoding(problem.id, result.every((item) => item.pass));
+    const judgeDown = result.length > 0 && result.every((item) => item.degraded);
+    if (nextMode === 'submit' && !judgeDown) recordCoding(problem.id, result.every((item) => item.pass));
   }
 
   const allPass = reports !== null && reports.length > 0 && reports.every((item) => item.pass);
+  const judgeDown = reports !== null && reports.length > 0 && reports.every((item) => item.degraded);
 
   return (
     <ScrollView
@@ -75,7 +77,14 @@ export default function CodingProblemScreen() {
           <Lang label="JavaScript" active={language === 'javascript'} onPress={() => setLanguage('javascript')} testID="language-javascript" />
           <Lang label="Python" active={language === 'python'} onPress={() => setLanguage('python')} testID="language-python" />
         </View>
-        <T color={theme.muted}>当前判题：{judgeLabel(language)}。函数名固定为 solve(data)。</T>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <T color={theme.muted}>当前判题：{judgeLabel(language)}。函数名固定为 solve(data)。</T>
+          {language === 'python' ? (
+            <View testID="python-online-badge" style={{ backgroundColor: theme.chip, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+              <T bold style={{ fontSize: 12 }}>需联网</T>
+            </View>
+          ) : null}
+        </View>
         <TextInput
           value={code[language]}
           onChangeText={(value) => setCode((current) => ({ ...current, [language]: value }))}
@@ -121,10 +130,18 @@ export default function CodingProblemScreen() {
         </View>
         {reports ? (
           <View testID="run-result" style={{ gap: 8 }}>
+            {judgeDown ? (
+              <View testID="judge-degrade" style={{ backgroundColor: theme.card, borderRadius: 14, padding: 14, gap: 6, borderWidth: 1, borderColor: theme.accent }}>
+                <T bold>判题服务暂时不可用</T>
+                <T>{reports[0]?.stderr}</T>
+                <T color={theme.muted}>这次没有记入错题本。</T>
+              </View>
+            ) : (
             <T bold color={allPass ? theme.primary : theme.wrong}>
               {mode === 'submit' ? (allPass ? '提交通过' : '提交未通过，已放入错题本') : allPass ? '样例通过' : '样例未通过'}
             </T>
-            {reports.map((report, index) => (
+            )}
+            {judgeDown ? null : reports.map((report, index) => (
               <View key={`${report.hidden}-${index}`} style={{ backgroundColor: report.pass ? theme.correctBg : theme.wrongBg, borderRadius: 12, padding: 12, gap: 4 }}>
                 <T bold>{report.hidden ? `隐藏测试 ${index + 1}` : `样例 ${index + 1}`} · {report.pass ? '通过' : '未通过'} · {report.timeMs} ms</T>
                 {report.hidden ? null : <T>输入：{report.input || '（空）'}</T>}

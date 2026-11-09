@@ -26,12 +26,23 @@ export default function LeaderboardScreen() {
         <T bold style={{ fontSize: 18 }}>本周排行</T>
       </View>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
-        <T color={theme.muted}>
-          这里的对手都是写在本机的示例，名字前标了「示例」。没有服务器，也不会上传你的成绩。每周一经验重新计算。
+        <T color={theme.muted} testID="leaderboard-note">
+          本周榜只在本机，带「示例」的是样本对手，不是真人。
         </T>
         {rows.map((row, index) => (
-          <View key={row.name} style={{ backgroundColor: row.sample ? theme.card : theme.correctBg, borderRadius: 14, padding: 14, flexDirection: 'row', justifyContent: 'space-between' }}>
-            <T bold>{index + 1}. {row.name}</T>
+          <View key={row.name} style={{ backgroundColor: row.sample ? theme.card : theme.correctBg, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+              <T bold>
+                {index + 1}. {row.name.replace(/^示例 · /, '')}
+              </T>
+              {row.sample ? (
+                <View testID="sample-badge" style={{ backgroundColor: theme.accent, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+                  <T bold color={theme.bg} style={{ fontSize: 12 }}>
+                    示例
+                  </T>
+                </View>
+              ) : null}
+            </View>
             <T>{row.weeklyXp} XP</T>
           </View>
         ))}

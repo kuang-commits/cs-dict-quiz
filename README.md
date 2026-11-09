@@ -61,7 +61,7 @@ npx expo start --web
 
 JavaScript 默认在本机运行，不需要网络，也不需要密钥。
 
-Python 默认请求公开的 Judge0 实例 `https://ce.judge0.com`（不需要密钥，有频率限制，大陆网络不一定打得开）。要换成自己的 Judge0 或 RapidAPI，在项目根目录建 `.env`：
+Python 默认请求公开的 Judge0 实例 `https://ce.judge0.com`（不需要密钥，有频率限制，大陆网络不一定打得开）。连不上、限流或超时时，页面会说明这是判题服务的网络问题，不是应用坏了，并且这次不会记入错题本。题目列表上的「需联网」只表示 Python 要在线判题，JavaScript 仍在本机运行。要换成自己的 Judge0 或 RapidAPI，在项目根目录建 `.env`（不要提交）：
 
 ```bash
 EXPO_PUBLIC_JUDGE0_URL=https://ce.judge0.com
@@ -83,6 +83,16 @@ EXPO_PUBLIC_JUDGE0_KEY=
 npm run validate
 npm run typecheck
 ```
+
+## 打 iOS 安装包
+
+内部试用包用 Expo EAS。需要 Apple Developer Program 和 Expo 账号。在项目根目录执行：
+
+```bash
+npx eas-cli build -p ios --profile preview
+```
+
+`preview` 打的是 Ad Hoc / 内部安装用的 IPA。证书、描述文件和 `.env` 里的密钥不要提交到仓库。步骤写在 [docs/ios-build.md](docs/ios-build.md)。
 
 ## 这一版没有做的
 
